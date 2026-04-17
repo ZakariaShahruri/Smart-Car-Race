@@ -1,15 +1,15 @@
-# 🏎️ RC Race Control — BusTWeek Smart Car 2026
+# 🏎️ RC Race Control — BusITWeek Smart Car 2026
 
-> **1st Place — BusTWeek Smart Car Race | Howest Bruges, April 2026**
+> **1st Place — BusITWeek Smart Car Race | Howest Bruges, April 2026**
 > *Record-breaking lap time achieved with this codebase.*
 
 ---
 
 ## 🏆 About This Project
 
-This repository contains the complete software stack powering our RC racecar, built and raced during **BusTWeek** — the annual Smart Car Race organized at **Howest University of Applied Sciences, Bruges**.
+This repository contains the complete software stack powering our RC racecar, built and raced during **BusITWeek** — the annual Smart Car Race organized at **Howest University of Applied Sciences, Bruges**.
 
-The challenge: build a remotely controlled car from scratch using a **Raspberry Pi 4** and electronic components, then race it against other teams. We didn't just compete — **we won, setting the fastest time of the event.**
+The challenge: build a remotely controlled car from scratch using a **Raspberry Pi** and electronic components, then race it against other teams. We didn't just compete — **we won, setting the fastest time of the event.**
 
 <p align="center">
   <img src="media/certificate.png" alt="Winner's Certificate" width="600">
@@ -159,7 +159,7 @@ Check Apache error logs: `sudo tail -20 /var/log/apache2/error.log`
 
 ## 🎓 Event
 
-**BusTWeek Smart Car Race**
+**BusITWeek Smart Car Race**
 Howest University of Applied Sciences, Bruges
 April 2026
 
