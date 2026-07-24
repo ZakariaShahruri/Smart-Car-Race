@@ -38,6 +38,16 @@ L298N H-Bridge → DC motors
 
 Each layer is intentionally minimal and independently testable — `car_control.py` can be run from a terminal to drive the car without touching the browser at all, which was invaluable for debugging on hardware.
 
+## Screenshots
+
+<p align="center">
+  <img src="media/ui-dpad.png" alt="D-pad control view" width="270">
+  <img src="media/ui-joystick.png" alt="Virtual joystick control view" width="270">
+  <img src="media/ui-active.png" alt="D-pad with forward held and live telemetry" width="270">
+</p>
+
+<p align="center"><em>D-pad, virtual joystick, and live telemetry while a command is held.</em></p>
+
 ## Hardware
 
 | Component | Details |
@@ -48,6 +58,13 @@ Each layer is intentionally minimal and independently testable — `car_control.
 | Power (Pi) | USB power bank |
 | Power (motors) | 2× 4×AA battery packs |
 | Chassis | Custom frame |
+
+<p align="center">
+  <img src="media/hw-raspberry-pi-4.jpg" alt="Raspberry Pi 4 Model B" width="330">
+  <img src="media/hw-l298-driver-ic.jpg" alt="L298 dual H-bridge driver IC, the chip at the core of the L298N module" width="330">
+</p>
+
+<p align="center"><em>Raspberry Pi 4 Model B, and the L298 dual H-bridge IC that the L298N driver module is built around. Reference photos, not the actual build — <a href="https://commons.wikimedia.org/wiki/File:Raspberry_Pi_4_Model_B_-_Top.jpg">Pi 4 photo</a> © Laserlicht, <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>; <a href="https://commons.wikimedia.org/wiki/File:L298_IMGP4533_wp.jpg">L298 photo</a> © Rainer Knäpper, Free Art License / GFDL 1.2.</em></p>
 
 **GPIO mapping (BCM numbering):**
 
