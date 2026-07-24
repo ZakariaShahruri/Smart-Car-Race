@@ -7,6 +7,8 @@
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
+.ruff_cache/
 
 # OS
 .DS_Store

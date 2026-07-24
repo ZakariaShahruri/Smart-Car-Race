@@ -8,80 +8,91 @@ Commands: forward, backward, left, right,
           spin-left, spin-right, stop
 """
 
+import logging
 import os
 import socket
 
-os.environ["GPIOZERO_PIN_FACTORY"] = "lgpio"
-os.environ["HOME"] = "/tmp"
-os.chdir("/tmp")
-
-from gpiozero import DigitalOutputDevice
-
 SOCK_PATH = "/var/run/car.sock"
+logger = logging.getLogger(__name__)
 
-IN1 = DigitalOutputDevice(5)   # left backward
-IN2 = DigitalOutputDevice(6)   # left forward
-IN3 = DigitalOutputDevice(13)  # right backward
-IN4 = DigitalOutputDevice(19)  # right forward
-
-def motors(lf, lb, rf, rb):
-    IN2.value = lf
-    IN1.value = lb
-    IN4.value = rf
-    IN3.value = rb
-
-def forward():      motors(1, 0, 1, 0)
-def backward():     motors(0, 1, 0, 1)
-def left():         motors(0, 0, 1, 0)   # arc left:  right motor only
-def right():        motors(1, 0, 0, 0)   # arc right: left motor only
-def forward_left(): motors(0, 0, 1, 0)
-def forward_right():motors(1, 0, 0, 0)
-def backward_left():motors(0, 0, 0, 1)
-def backward_right():motors(0, 1, 0, 0)
-def spin_left():    motors(0, 1, 1, 0)   # left bwd, right fwd
-def spin_right():   motors(1, 0, 0, 1)   # left fwd, right bwd
-def stop():         motors(0, 0, 0, 0)
-
-COMMANDS = {
-    "forward":        forward,
-    "backward":       backward,
-    "left":           left,
-    "right":          right,
-    "forward-left":   forward_left,
-    "forward-right":  forward_right,
-    "backward-left":  backward_left,
-    "backward-right": backward_right,
-    "spin-left":      spin_left,
-    "spin-right":     spin_right,
-    "stop":           stop,
+# (left-forward, left-backward, right-forward, right-backward) pin states per command.
+COMMANDS: dict[str, tuple[int, int, int, int]] = {
+    "forward":        (1, 0, 1, 0),
+    "backward":       (0, 1, 0, 1),
+    "left":           (0, 0, 1, 0),  # arc left:  right motor only
+    "right":          (1, 0, 0, 0),  # arc right: left motor only
+    "forward-left":   (0, 0, 1, 0),
+    "forward-right":  (1, 0, 0, 0),
+    "backward-left":  (0, 0, 0, 1),
+    "backward-right": (0, 1, 0, 0),
+    "spin-left":      (0, 1, 1, 0),  # left bwd, right fwd
+    "spin-right":     (1, 0, 0, 1),  # left fwd, right bwd
+    "stop":           (0, 0, 0, 0),
 }
 
-if os.path.exists(SOCK_PATH):
-    os.remove(SOCK_PATH)
 
-server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-server.bind(SOCK_PATH)
-os.chmod(SOCK_PATH, 0o777)
-server.listen(5)
+def resolve(command: str) -> tuple[int, int, int, int]:
+    """Look up the pin state for a raw socket command, defaulting to stop."""
+    return COMMANDS.get(command, COMMANDS["stop"])
 
-print(f"car_daemon listening on {SOCK_PATH}", flush=True)
-stop()
 
-try:
-    while True:
-        conn, _ = server.accept()
-        with conn:
-            data = conn.recv(64).decode().strip().lower()
-            parts = data.split("/")
-            cmd = parts[0]
-            fn = COMMANDS.get(cmd, stop)
-            fn()
-            conn.sendall(b"ok\n")
-            print(f"cmd: {cmd}", flush=True)
-except KeyboardInterrupt:
-    pass
-finally:
-    stop()
-    server.close()
+class MotorController:
+    """Owns the GPIO pins for the lifetime of the daemon."""
+
+    def __init__(self) -> None:
+        os.environ["GPIOZERO_PIN_FACTORY"] = "lgpio"
+        os.environ["HOME"] = "/tmp"
+        os.chdir("/tmp")
+
+        from gpiozero import DigitalOutputDevice
+
+        self._in1 = DigitalOutputDevice(5)   # left backward
+        self._in2 = DigitalOutputDevice(6)   # left forward
+        self._in3 = DigitalOutputDevice(13)  # right backward
+        self._in4 = DigitalOutputDevice(19)  # right forward
+
+    def apply(self, lf: int, lb: int, rf: int, rb: int) -> None:
+        self._in2.value = lf
+        self._in1.value = lb
+        self._in4.value = rf
+        self._in3.value = rb
+
+    def run(self, command: str) -> None:
+        self.apply(*resolve(command))
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+    controller = MotorController()
+
     if os.path.exists(SOCK_PATH):
         os.remove(SOCK_PATH)
+
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(SOCK_PATH)
+    os.chmod(SOCK_PATH, 0o777)
+    server.listen(5)
+
+    logger.info("car_daemon listening on %s", SOCK_PATH)
+    controller.run("stop")
+
+    try:
+        while True:
+            conn, _ = server.accept()
+            with conn:
+                data = conn.recv(64).decode().strip().lower()
+                command = data.split("/")[0]
+                controller.run(command)
+                conn.sendall(b"ok\n")
+                logger.info("cmd: %s", command)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        controller.run("stop")
+        server.close()
+        if os.path.exists(SOCK_PATH):
+            os.remove(SOCK_PATH)
+
+
+if __name__ == "__main__":
+    main()

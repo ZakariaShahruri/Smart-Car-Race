@@ -1,0 +1,11 @@
+[Unit]
+Description=RC car GPIO daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /var/www/cgi-bin/car_daemon.py
+Restart=on-failure
+User=root
+
+[Install]
+WantedBy=multi-user.target

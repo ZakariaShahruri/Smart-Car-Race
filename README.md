@@ -1,5 +1,10 @@
 # 🏎️ RC Race Control
 
+![CI](https://github.com/ZakariaShahruri/Smart-Car-Race/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi-c51a4a)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 > **🏆 1st Place — BusITWeek Smart Car Race, Howest Bruges, April 2026 — fastest lap of the event.**
 
 A browser-controlled RC car built on a Raspberry Pi. No app, no framework — a persistent GPIO daemon talks to a lightweight Apache CGI backend over a Unix socket, and a single-page UI drives it from any phone or laptop on the network.
@@ -16,17 +21,12 @@ The interesting engineering problem was **state persistence under GPIO**: pin st
 
 ## Architecture
 
-```
-Browser (UI)
-    │  HTTP requests
-    ▼
-Apache + CGI  (steering.cgi, car_control.cgi)
-    │  Unix domain socket
-    ▼
-car_daemon.py  (persistent process, owns GPIO)
-    │  GPIO output
-    ▼
-L298N H-Bridge → DC motors
+```mermaid
+flowchart TD
+    A["Browser (UI)"] -->|HTTP requests| B["Apache + CGI<br/>steering.cgi, car_control.cgi"]
+    B -->|Unix domain socket| C["car_daemon.py<br/>persistent process, owns GPIO"]
+    C -->|GPIO output| D["L298N H-Bridge"]
+    D --> E["DC Motors"]
 ```
 
 | Layer | File | Responsibility |
@@ -117,23 +117,10 @@ sudo chmod +x /var/www/cgi-bin/{steering.cgi,car_control.cgi,car_control.py,car_
 
 ### Run the daemon as a systemd service
 
-This repo doesn't ship a unit file; create one so the daemon survives reboots and crashes:
+The unit file lives in [`systemd/car_daemon.service`](systemd/car_daemon.service) so the daemon survives reboots and crashes:
 
 ```bash
-sudo tee /etc/systemd/system/car_daemon.service > /dev/null <<'EOF'
-[Unit]
-Description=RC car GPIO daemon
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/python3 /var/www/cgi-bin/car_daemon.py
-Restart=on-failure
-User=root
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
+sudo cp systemd/car_daemon.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now car_daemon
 ```
@@ -153,16 +140,38 @@ http://<raspberry-pi-ip>/cgi-bin/steering.cgi
 
 Find the Pi's IP with `hostname -I`.
 
+## Testing
+
+`car_daemon.py` and `car_control.py` are structured so the command-mapping and socket-protocol logic can be tested without any GPIO hardware — `gpiozero` is only imported when the daemon actually starts, never at module load time.
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+pytest
+```
+
+CI runs the same two commands on every push via [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
 ## File structure
 
 ```
+├── .github/workflows/
+│   └── ci.yml              # Lint + test on push
 ├── media/
-│   └── certificate.png   # Event certificate
-├── steering.cgi           # Main UI — full controller interface, served as HTML
-├── car_control.cgi        # CGI endpoint invoked by the browser's fetch() calls
-├── car_control.py         # Unix socket client — sends a single command to the daemon
-├── car_daemon.py          # Persistent GPIO daemon — owns motor state
+│   └── certificate.png     # Event certificate
+├── systemd/
+│   └── car_daemon.service  # systemd unit for the daemon
+├── tests/
+│   ├── test_car_daemon.py
+│   └── test_car_control.py
+├── steering.cgi             # Main UI — full controller interface, served as HTML
+├── car_control.cgi          # CGI endpoint invoked by the browser's fetch() calls
+├── car_control.py           # Unix socket client — sends a single command to the daemon
+├── car_daemon.py            # Persistent GPIO daemon — owns motor state
+├── pyproject.toml           # pytest config
+├── requirements-dev.txt     # pytest + ruff for local dev
 ├── .gitignore
+├── LICENSE
 └── README.md
 ```
 
@@ -185,6 +194,10 @@ Check `sudo tail -20 /var/log/apache2/error.log` — this is almost always a CGI
 **BusITWeek Smart Car Race**
 Howest University of Applied Sciences, Bruges — April 2026
 Applied Informatics programme, Programme Manager Joachim François
+
+## License
+
+MIT — see [LICENSE](LICENSE).
 
 ---
 
